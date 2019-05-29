@@ -5,9 +5,11 @@
 
 Adafruit_ADS1115 ads;
 
-int LED_A = 17; // Def Pin LED_A
-int LED_B = 18; // Def Pin LED_B
-int PORT_PWM = 19; // Def Pin LED_B
+#define LED_A      17
+#define LED_B      18
+#define PORT_PWM   19
+#define PORT_DAC   25
+
 
 int Freq = 10000; //Def PWM parameter
 int LedChannel = 0;
@@ -22,7 +24,6 @@ void I2C ()
 
   Results = ads.readADC_Differential_0_1();
   Serial1.print("Differential: ");Serial1.print("("); Serial1.print(Results * multiplier); Serial1.print("mV)");Serial1.print(";");
-  delay(500);
 }
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -59,7 +60,7 @@ int Fibonacci (void)
   uint32_t Fib1 = 0, Fib2 = 1, Fib3;
   uint32_t FibEnd;
 
-  for(int count = 0 ; count < 19 ; count++)
+  for(int count = 0 ; count < 100 ; count++)
   {
     Fib3 = Fib1 + Fib2;
     Fib1 = Fib2;
@@ -67,18 +68,30 @@ int Fibonacci (void)
   }
   FibEnd = Fib3;
 
-  return FibEnd;
+  Serial.print(FibEnd);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 
-int ADC (void)
+int ADC ()
 {
-  int16_t Val = analogRead(4);
+  int Read = analogRead(4);
+  float Volt = Read * (3.6 / 4096.0);
 
-  return Val;
+  Serial.println(Volt);
 }
 
+////////////////////////////////////////////////////////////////////////////////
+
+void DAC ()
+{
+  dacWrite(PORT_DAC, 255);
+  delay(200);
+  dacWrite(PORT_DAC, 128);
+  delay(200);
+}
+
+////////////////////////////////////////////////////////////////////////////////
 //----------------------------------------------------------------------------//
 
 void setup()
@@ -93,13 +106,13 @@ void setup()
 
   //ADC Config
   analogReadResolution(12);             // Sets the sample bits and read resolution
-  analogSetWidth(12);                   // Sets the sample bits and read resolution
-  analogSetCycles(8);                   // Set number of cycles per sample, default is 8.
-  analogSetSamples(1);                  // Set number of samples in the range, default is 1, it has an effect on sensitivity has been multiplied
-  analogSetClockDiv(255);                 // Set the divider for the ADC clock, default is 1, range is 1 - 255
-  analogSetAttenuation(ADC_0db);       // Sets the input attenuation for ALL ADC inputs
-
-   adcAttachPin(4);
+  //analogSetWidth(12);                   // Sets the sample bits and read resolution
+  //analogSetCycles(8);                   // Set number of cycles per sample, default is 8.
+  //analogSetSamples(1);                  // Set number of samples in the range, default is 1, it has an effect on sensitivity has been multiplied
+  //analogSetClockDiv(1);               // Set the divider for the ADC clock, default is 1, range is 1 - 255
+  analogSetAttenuation(ADC_11db);       // Sets the input attenuation for ALL ADC inputs
+  analogSetPinAttenuation(4, ADC_11db);
+  adcAttachPin(4);
 
 }
 
@@ -107,18 +120,14 @@ void setup()
 
 void loop()
 {
-  //Port_A();
-  //Port_B();
+  Port_A();
+  Port_B();
   //I2C();
-  //PWM();
-
-  Serial.print(Fibonacci());
+  PWM();
+  Fibonacci();
   Serial.print(" ; ");
-  Serial.println(ADC());
+  ADC();
 
-  //Serial.print();
-  //Serial.print();
-  //Serial.print();
+ delay(500);
 
-  delay(1000);
 }
