@@ -10,7 +10,7 @@ Adafruit_ADS1115 ads;
 #define PORT_PWM   19
 #define PORT_DAC   25
 
-
+///// DEF PWM /////
 int Freq = 10000; //Def PWM parameter
 int LedChannel = 0;
 int Resolution = 8;
@@ -120,8 +120,9 @@ void setup()
 
 void loop()
 {
-  Port_A();
-  Port_B();
+  Port_A();   //// First Stage
+  Port_B();   //// Seconde Stage
+
   //I2C();
   PWM();
   Fibonacci();
