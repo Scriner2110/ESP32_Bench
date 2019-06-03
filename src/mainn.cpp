@@ -1,5 +1,9 @@
 #include <Arduino.h>
 #include <Adafruit_ADS1015.h>
+#include <SPI.h>
+#include "Adafruit_FRAM_SPI.h"
+#include <Wire.h>
+#include "Adafruit_MCP9808.h"
 
 
 
@@ -10,21 +14,44 @@ Adafruit_ADS1115 ads;
 #define PORT_PWM   19
 #define PORT_DAC   25
 
-///// DEF PWM /////
+
 int Freq = 10000; //Def PWM parameter
 int LedChannel = 0;
 int Resolution = 8;
+
+uint8_t FRAM_CS = 33;
+
+//Adafruit_FRAM_SPI fram = Adafruit_FRAM_SPI(FRAM_CS);  // use hardware SPI
+
+uint8_t FRAM_SCK= 14;
+uint8_t FRAM_MISO = 12;
+uint8_t FRAM_MOSI = 13;
+
+//Or use software SPI, any pins!
+Adafruit_FRAM_SPI fram = Adafruit_FRAM_SPI(FRAM_SCK, FRAM_MISO, FRAM_MOSI, FRAM_CS);
+Adafruit_MCP9808 tempsensor = Adafruit_MCP9808();
 
 ////////////////////////////////////////////////////////////////////////////////
 
 void I2C ()
 {
-  int16_t Results;
-  float multiplier = 0.0625F; // 2V Range
-
-  Results = ads.readADC_Differential_0_1();
-  Serial1.print("Differential: ");Serial1.print("("); Serial1.print(Results * multiplier); Serial1.print("mV)");Serial1.print(";");
+  tempsensor.wake();
+  float c = tempsensor.readTempC();
+  Serial.print(c, 4); Serial.print("*C"); 
 }
+
+////////////////////////////////////////////////////////////////////////////////
+
+void Spi ()
+{
+  fram.writeEnable(true);
+  fram.write8(0x01, 0x50);
+  fram.writeEnable(false);
+
+  int value = fram.read8(0x01);
+  Serial.print(value);
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
 void Port_A ()
@@ -55,12 +82,12 @@ void PWM ()
 
 ////////////////////////////////////////////////////////////////////////////////
 
-int Fibonacci (void)
+void Fibonacci (void)
 {
   uint32_t Fib1 = 0, Fib2 = 1, Fib3;
   uint32_t FibEnd;
 
-  for(int count = 0 ; count < 100 ; count++)
+  for(int count = 0 ; count < 50 ; count++)
   {
     Fib3 = Fib1 + Fib2;
     Fib1 = Fib2;
@@ -73,7 +100,7 @@ int Fibonacci (void)
 
 ////////////////////////////////////////////////////////////////////////////////
 
-int ADC ()
+void ADC ()
 {
   int Read = analogRead(4);
   float Volt = Read * (3.6 / 4096.0);
@@ -96,20 +123,22 @@ void DAC ()
 
 void setup()
 {
-  ads.setGain(GAIN_TWO);
-  ads.begin();
-
   Serial.begin(115200);
+
+  tempsensor.setResolution(1);
+  //  0    0.5°C       30 ms
+  //  1    0.25°C      65 ms
+  //  2    0.125°C     130 ms
+  //  3    0.0625°C    250 ms
+
+  // SPI FRAM
+  fram.begin();
 
   ledcSetup(LedChannel, Freq, Resolution);
   ledcAttachPin(PORT_PWM, LedChannel);
 
-  //ADC Config
+  // ADC Config
   analogReadResolution(12);             // Sets the sample bits and read resolution
-  //analogSetWidth(12);                   // Sets the sample bits and read resolution
-  //analogSetCycles(8);                   // Set number of cycles per sample, default is 8.
-  //analogSetSamples(1);                  // Set number of samples in the range, default is 1, it has an effect on sensitivity has been multiplied
-  //analogSetClockDiv(1);               // Set the divider for the ADC clock, default is 1, range is 1 - 255
   analogSetAttenuation(ADC_11db);       // Sets the input attenuation for ALL ADC inputs
   analogSetPinAttenuation(4, ADC_11db);
   adcAttachPin(4);
@@ -123,12 +152,16 @@ void loop()
   Port_A();   //// First Stage
   Port_B();   //// Seconde Stage
 
-  //I2C();
+
   PWM();
+
+  Spi();
+  Serial.print(" ; ");
   Fibonacci();
   Serial.print(" ; ");
   ADC();
 
- delay(500);
+
+  delay(500);
 
 }
